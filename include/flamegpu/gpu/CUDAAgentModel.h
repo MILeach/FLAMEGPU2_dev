@@ -1,5 +1,6 @@
 #ifndef INCLUDE_FLAMEGPU_GPU_CUDAAGENTMODEL_H_
 #define INCLUDE_FLAMEGPU_GPU_CUDAAGENTMODEL_H_
+#include <atomic>
 #include <memory>
 #include <vector>
 #include <string>
@@ -161,6 +162,11 @@ class CUDAAgentModel : public Simulation {
      * With a resolution of around 0.5 microseconds (cudaEventElapsedtime)
      */
     float getSimulationElapsedTime() const;
+    /**
+     * Returns the unique instance id of this CUDAAgentModel instance
+     * @note This value is used internally for environment property storage
+     */
+    using Simulation::getInstanceID;
 
  protected:
     /**
@@ -277,6 +283,11 @@ class CUDAAgentModel : public Simulation {
      */
     void initialiseRTC();
     /**
+     * This must be allocated after initialise singletons
+     * This must be reset after cudaDeviceReset()
+     */
+    jitify::JitCache *rtc_kernel_cache;
+    /**
      * One instance of host api is used for entire model
      */
     std::unique_ptr<FLAMEGPU_HOST_API> host_api;
@@ -287,10 +298,6 @@ class CUDAAgentModel : public Simulation {
      * @note called at the end of step() and after all init/hostLayer functions and exit conditions have finished
      */
     void processHostAgentCreation(const unsigned int &streamId);
-    /**
-     * Runs a specific agent function
-     * @param func_des the agent function to execute
-     */
 
  public:
     typedef std::vector<NewAgentStorage> AgentDataBuffer;
@@ -315,6 +322,17 @@ class CUDAAgentModel : public Simulation {
      */
     std::unique_ptr<ModelVis> visualisation;
 #endif
+    /**
+     * This tracks the current number of alive CUDAAgentModel instances
+     * When the last is destructed, cudaDeviceReset is triggered();
+     */
+    static std::atomic<int> active_instances;
+
+ public:
+    /**
+     * If changed to false, will not auto cudaDeviceReset when final CUDAAgentModel instance is destructed
+     */
+    static bool AUTO_CUDA_DEVICE_RESET;
 };
 
 #endif  // INCLUDE_FLAMEGPU_GPU_CUDAAGENTMODEL_H_
