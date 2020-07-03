@@ -96,7 +96,6 @@ FLAMEGPU_AGENT_FUNCTION(pred_avoid, MsgBruteForce, MsgNone) {
 	const float distance = sqrt(dx*dx + dy*dy);
 
 	// TODO: Original implementation tests id to remove self-avoidance. However, dx, dy == 0 so no need?
-	// TODO: Move magic constant to env variable
 	if (distance < SAME_SPECIES_AVOIDANCE_RADIUS) {
 	    avoid_velocity_x += (SAME_SPECIES_AVOIDANCE_RADIUS / distance) * dx;
 	    avoid_velocity_y += (SAME_SPECIES_AVOIDANCE_RADIUS / distance) * dy;
@@ -309,7 +308,7 @@ FLAMEGPU_AGENT_FUNCTION(grass_output_location, MsgNone, MsgBruteForce) {
     return ALIVE;
 }
 
-FLAMEGPU_AGENT_FUNCTION(grass_eaten, MsgBruteForce, MsgNone) {
+FLAMEGPU_AGENT_FUNCTION(grass_eaten, MsgBruteForce, MsgBruteForce) {
     // Exercise 3.2 : TODO: Describe exercise
 
     return ALIVE;
@@ -380,7 +379,9 @@ int main(int argc, const char ** argv) {
         agent.newVariable<int>("life");
         agent.newVariable<float>("type")
 ;
-        agent.newFunction("prey_output_location", prey_output_location).setMessageOutput("prey_location_message");
+        auto& fn = agent.newFunction("prey_output_location", prey_output_location);
+	fn.setMessageOutput("prey_location_message");
+	fn.setMessageOutputOptional(true);
         agent.newFunction("prey_avoid_pred", prey_avoid_pred).setMessageInput("predator_location_message");
         agent.newFunction("prey_flock", prey_flock).setMessageInput("prey_location_message");
         agent.newFunction("prey_move", prey_move);
@@ -390,7 +391,9 @@ int main(int argc, const char ** argv) {
 	function.setMessageOutput("prey_eaten_message");
         agent.newFunction("prey_eat_or_starve", prey_eat_or_starve).setMessageInput("grass_eaten_message");
 	// TODO: Output new agent??
-        agent.newFunction("prey_reproduction", prey_reproduction);
+        auto& fn_prey_reproduction = agent.newFunction("prey_reproduction", prey_reproduction);
+	fn_prey_reproduction.setAgentOutput("prey", "default");
+	fn_prey_reproduction.setAgentOutputOptional(true);
     }
 
     {   // Predator agent
@@ -410,7 +413,9 @@ int main(int argc, const char ** argv) {
         agent.newFunction("pred_avoid", pred_avoid).setMessageInput("predator_location_message");
         agent.newFunction("pred_move", pred_move);
         agent.newFunction("pred_eat_or_starve", pred_eat_or_starve).setMessageInput("prey_eaten_message");
-        agent.newFunction("pred_reproduction", pred_reproduction);
+       	auto& fn_pred_reproduction =  agent.newFunction("pred_reproduction", pred_reproduction);
+	fn_pred_reproduction.setAgentOutput("predator", "default");
+	fn_pred_reproduction.setAgentOutputOptional(true);
     }
 
     {   // Grass agent
@@ -420,10 +425,14 @@ int main(int argc, const char ** argv) {
 	agent.newVariable<float>("y");
 	agent.newVariable<int>("dead_cycles");
         agent.newVariable<int>("available");
-
-	agent.newFunction("grass_output_location", grass_output_location).setMessageOutput("grass_location_message");
+	auto& fn = agent.newFunction("grass_output_location", grass_output_location);
+	fn.setMessageOutput("grass_location_message");
+	fn.setMessageOutputOptional(true);
 	// TODO: Add optional grass_eaten message
-	agent.newFunction("grass_eaten", grass_eaten).setMessageInput("prey_location_message");
+	auto& fn_grass_eaten = agent.newFunction("grass_eaten_message", grass_eaten);
+	fn_grass_eaten.setMessageInput("prey_location_message");
+	fn_grass_eaten.setMessageOutput("grass_eaten_message");
+	fn_grass_eaten.setMessageOutputOptional(true);
 	agent.newFunction("grass_growth", grass_growth);
 	
     }
@@ -447,39 +456,39 @@ int main(int argc, const char ** argv) {
         LayerDescription &layer = model.newLayer();
         layer.addAgentFunction(prey_output_location);
         layer.addAgentFunction(pred_output_location);
-        layer.addAgentFunction(grass_output_location);
+        //layer.addAgentFunction(grass_output_location);
     }
-   // {   // Layer #2
-   //     LayerDescription &layer = model.newLayer();
-   //     layer.addAgentFunction(pred_follow_prey);
-   //     layer.addAgentFunction(prey_avoid_pred);
-   // }
-   // {   // Layer #3
-   //     LayerDescription &layer = model.newLayer();
-   //     layer.addAgentFunction(prey_flock);
-   //     layer.addAgentFunction(pred_avoid);
-   // }
-   // {   // Layer #4
-   //     LayerDescription &layer = model.newLayer();
-   //     layer.addAgentFunction(prey_move);
-   //     layer.addAgentFunction(pred_move);
-   // }
-   // {   // Layer #5
-   //     LayerDescription &layer = model.newLayer();
-   //     layer.addAgentFunction(grass_eaten);
-   //     layer.addAgentFunction(prey_eaten);
-   // }
-   // {   // Layer #6
-   //     LayerDescription &layer = model.newLayer();
-   //     layer.addAgentFunction(prey_eat_or_starve);
-   //     layer.addAgentFunction(pred_eat_or_starve);
-   // }
-   // {   // Layer #7
-   //     LayerDescription &layer = model.newLayer();
-   //     layer.addAgentFunction(pred_reproduction);
-   //     layer.addAgentFunction(prey_reproduction);
-   //     layer.addAgentFunction(grass_growth);
-   // }
+    {   // Layer #2
+        LayerDescription &layer = model.newLayer();
+        layer.addAgentFunction(pred_follow_prey);
+        layer.addAgentFunction(prey_avoid_pred);
+    }
+    {   // Layer #3
+        LayerDescription &layer = model.newLayer();
+        layer.addAgentFunction(prey_flock);
+        layer.addAgentFunction(pred_avoid);
+    }
+    {   // Layer #4
+        LayerDescription &layer = model.newLayer();
+        layer.addAgentFunction(prey_move);
+        layer.addAgentFunction(pred_move);
+    }
+    {   // Layer #5
+        LayerDescription &layer = model.newLayer();
+        //layer.addAgentFunction(grass_eaten);
+        layer.addAgentFunction(prey_eaten);
+    }
+    {   // Layer #6
+        LayerDescription &layer = model.newLayer();
+        //layer.addAgentFunction(prey_eat_or_starve);
+        layer.addAgentFunction(pred_eat_or_starve);
+    }
+    {   // Layer #7
+        LayerDescription &layer = model.newLayer();
+        layer.addAgentFunction(pred_reproduction);
+        layer.addAgentFunction(prey_reproduction);
+        layer.addAgentFunction(grass_growth);
+    }
     NVTX_POP();
 
     /**
@@ -505,7 +514,7 @@ int main(int argc, const char ** argv) {
     printf("Step counter: %d\n Simulation Steps: %d", cuda_model.getStepCounter(), cuda_model.getSimulationConfig().steps);
      
     while (cuda_model.getStepCounter() < cuda_model.getSimulationConfig().steps && cuda_model.step()) {
-	printf("On step %d", cuda_model.getStepCounter());
+	printf("On step %d \n", cuda_model.getStepCounter());
         //   cuda_model.getPopulationData(cell_pop);
         //  printPopulation(cell_pop);
         // getchar();
