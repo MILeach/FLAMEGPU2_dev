@@ -142,6 +142,10 @@ if(BUILD_ALL_EXAMPLES OR BUILD_EXAMPLE_ENSEMBLE)
     add_subdirectory(examples/ensemble)
 endif()
 
+if(BUILD_ALL_EXAMPLES OR BUILD_EXAMPLE_ENSEMBLE)
+    add_subdirectory(examples/boids_concurrency)
+endif()
+
 # Add the tests directory (if required)
 if(BUILD_TESTS)
     add_subdirectory(tests)
